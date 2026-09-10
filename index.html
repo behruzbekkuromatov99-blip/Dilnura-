@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Dilnura — Tug'ilgan kun</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Marcellus&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+/* =========================================================
+   0. TOKENS & RESET
+   ========================================================= */
+:root{
+  --bg-1:#0d2b22;
+  --bg-2:#163d30;
+  --bg-3:#0a231b;
+  --gold:#d4af6a;
+  --gold-light:#f2d9a1;
+  --gold-line:rgba(212,175,106,.35);
+  --cream:#f7f3e8;
+  --cream-dim:rgba(247,243,232,.72);
+  --font-display:'Cormorant Garamond', Georgia, serif;
+  --font-body:'Marcellus', Georgia, serif;
+  --font-ui:'Inter', system-ui, sans-serif;
+}
+
+*{ box-sizing:border-box; }
+html,body{
+  margin:0; padding:0; width:100%; height:100%;
+  background: radial-gradient(ellipse at 50% 0%, var(--bg-2), var(--bg-1) 60%, var(--bg-3) 100%);
+  color:var(--cream);
+  font-family:var(--font-body);
+  overflow:hidden;
+}
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; }
+}
+
+/* =========================================================
+   1. FON: zarrachalar + burchak chiziqlari + konfetti qatlami
+   ========================================================= */
+#particles-canvas{
+  position:fixed; inset:0; width:100%; height:100%;
+  z-index:0; pointer-events:none;
+}
+#confetti-canvas{
+  position:fixed; inset:0; width:100%; height:100%;
+  z-index:60; pointer-events:none;
+}
+.corner-svg{
+  position:fixed; width:min(45vw,260px); height:auto; z-index:1;
+  pointer-events:none; opacity:.55;
+}
+.corner-svg.top-left{ top:0; left:0; }
+.corner-svg.bottom-right{ bottom:0; right:0; transform:rotate(180deg); }
+.corner-svg path{
+  fill:none; stroke:var(--gold); stroke-width:1; stroke-linecap:round;
+  stroke-dasharray:400; stroke-dashoffset:400;
+  animation:drawLine 2.4s ease forwards .3s;
+}
+@keyframes drawLine{ to{ stroke-dashoffset:0; } }
+
+/* =========================================================
+   2. YUQORIDAGI BOSHQARUVLAR
+   ========================================================= */
+.top-controls{
+  position:fixed; top:0; left:0; right:0; z-index:50;
+  display:flex; justify-content:space-between; align-items:flex-start;
+  padding:18px 16px; pointer-events:none;
+}
+.top-controls > *{ pointer-events:auto; }
+
+.lang-switcher{
+  display:flex; align-items:center; gap:6px;
+  background:rgba(13,43,34,.55);
+  border:1px solid var(--gold-line);
+  border-radius:999px;
+  padding:5px;
+  backdrop-filter:blur(6px);
+}
+.lang-pill{
+  font-family:var(--font-ui);
+  font-size:.72rem; font-weight:600; letter-spacing:.04em;
+  color:var(--cream-dim);
+  background:transparent; border:none; cursor:pointer;
+  padding:6px 10px; border-radius:999px;
+  transition:background .25s ease, color .25s ease, transform .15s ease;
+}
+.lang-pill:hover{ color:var(--cream); transform:translateY(-1px); }
+.lang-pill.active{
+  background:linear-gradient(135deg,#1c5340,#2f6e56);
+  color:var(--gold-light);
+  box-shadow:inset 0 0 0 1px var(--gold-line);
+}
+.script-toggle{
+  font-family:var(--font-ui);
+  font-size:.7rem; font-weight:600;
+  color:var(--gold-light);
+  background:rgba(212,175,106,.12);
+  border:1px solid var(--gold-line);
+  border-radius:999px;
+  width:34px; height:26px; margin-left:2px;
+  cursor:pointer;
+  transition:background .25s ease, transform .15s ease, opacity .2s ease;
+}
+.script-toggle:hover{ background:rgba(212,175,106,.22); transform:translateY(-1px); }
+.script-toggle:disabled{ opacity:.3; cursor:not-allowed; transform:none; }
+
+.music-button{
+  width:42px; height:42px; border-radius:50%;
+  background:rgba(13,43,34,.55);
+  border:1px solid var(--gold-line);
+  backdrop-filter:blur(6px);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; transition:transform .2s ease, box-shadow .3s ease;
+}
+.music-button:hover{ transform:scale(1.06); }
+.music-button.playing{ box-shadow:0 0 14px 2px rgba(212,175,106,.45); }
+.music-bars{ display:flex; align-items:flex-end; gap:2.5px; height:14px; }
+.music-bars span{
+  display:block; width:2.5px; background:var(--gold-light); border-radius:2px;
+  height:4px; transition:height .2s ease;
+}
+.music-button.playing .music-bars span{ animation:bar 0.9s ease-in-out infinite; }
+.music-bars span:nth-child(1){ animation-delay:0s; }
+.music-bars span:nth-child(2){ animation-delay:.15s; }
+.music-bars span:nth-child(3){ animation-delay:.3s; }
+@keyframes bar{ 0%,100%{ height:4px; } 50%{ height:14px; } }
+
+/* =========================================================
+   3. KIRISH EKRANI — KONVERT
+   ========================================================= */
+#envelope-screen{
+  position:fixed; inset:0; z-index:10;
+  display:flex; align-items:center; justify-content:center;
+  padding:24px;
+  transition:opacity .8s ease, visibility .8s ease;
+}
+#envelope-screen.hidden{ opacity:0; visibility:hidden; pointer-events:none; }
+
+.envelope-wrap{
+  position:relative;
+  width:min(78vw, 300px);
+  perspective:1000px;
+  text-align:center;
+}
+.envelope-hint{
+  font-family:var(--font-ui);
+  font-size:.72rem; letter-spacing:.28em;
+  color:var(--cream-dim);
+  margin-bottom:22px;
+  animation:fadeIn 1.2s ease .4s both;
+}
+.envelope{
+  position:relative; width:100%; aspect-ratio:3/2;
+  filter:drop-shadow(0 12px 26px rgba(0,0,0,.45));
+  animation:floatEnvelope 4.5s ease-in-out infinite;
+}
+@keyframes floatEnvelope{ 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-8px);} }
+
+.envelope.opened{ animation:none; }
+.envelope svg{ width:100%; height:100%; overflow:visible; }
+.env-body{ fill:#123a2c; stroke:var(--gold); stroke-width:1.2; }
+.env-flap{
+  fill:#184734; stroke:var(--gold); stroke-width:1.2;
+  transform-origin:50% 12%;
+  transition:transform 1s cubic-bezier(.6,-0.1,.35,1.3), filter 1s ease;
+}
+.envelope.opened .env-flap{ transform:rotateX(180deg); filter:brightness(1.4); }
+.env-glow{ opacity:0; transition:opacity 1s ease; }
+.envelope.opened .env-glow{ opacity:1; }
+
+.envelope-button{
+  position:absolute; left:50%; top:52%; transform:translate(-50%,-50%) scale(1);
+  width:74px; height:74px; border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, var(--gold-light), var(--gold) 65%, #a9803f 100%);
+  border:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 6px 18px rgba(0,0,0,.4), 0 0 0 1px rgba(255,255,255,.15) inset;
+  transition:transform .35s cubic-bezier(.34,1.56,.64,1);
+  font-family:var(--font-ui); font-weight:600; letter-spacing:.08em;
+  font-size:.68rem; color:#1a2f22;
+}
+.envelope-button:hover, .envelope-button:focus-visible{ transform:translate(-50%,-50%) scale(1.14); }
+.envelope-button:active{ transform:translate(-50%,-50%) scale(0.95); }
+.envelope.opened .envelope-button{ opacity:0; transform:translate(-50%,-50%) scale(0.6); pointer-events:none; }
+
+/* =========================================================
+   4. ASOSIY SAHIFA
+   ========================================================= */
+#main-content{
+  position:fixed; inset:0; z-index:5;
+  display:none;
+  opacity:0;
+  transition:opacity 1s ease;
+  overflow-y:auto;
+  scroll-snap-type:y proximity;
+  -webkit-overflow-scrolling:touch;
+}
+#main-content.show{ display:block; opacity:1; }
+
+.section{
+  min-height:100%;
+  width:100%;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center;
+  padding:100px 24px 70px;
+  scroll-snap-align:start;
+  position:relative;
+}
+
+.subtitle{
+  font-family:var(--font-ui);
+  font-size:.72rem; letter-spacing:.32em; text-transform:uppercase;
+  color:var(--cream-dim);
+  margin-bottom:14px;
+  animation:fadeIn 1s ease .2s both;
+}
+
+.hero-title{
+  font-family:var(--font-display);
+  font-weight:600;
+  font-size:clamp(3.2rem, 15vw, 5.6rem);
+  letter-spacing:.05em;
+  line-height:1;
+  margin:0 0 22px;
+  background:linear-gradient(100deg, var(--gold) 0%, var(--gold-light) 25%, #fff6df 50%, var(--gold-light) 75%, var(--gold) 100%);
+  background-size:220% auto;
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  animation:shine 6s linear infinite;
+}
+@keyframes shine{ to{ background-position:-220% center; } }
+.hero-title span{ display:inline-block; opacity:0; transform:translateY(14px); animation:letterIn .7s cubic-bezier(.2,.8,.2,1) forwards; }
+
+.divider{ display:flex; align-items:center; gap:10px; margin:6px 0 26px; }
+.divider .line{ width:44px; height:1px; background:linear-gradient(90deg, transparent, var(--gold)); }
+.divider .line.right{ background:linear-gradient(90deg, var(--gold), transparent); }
+.divider svg{ width:16px; height:16px; }
+
+.greeting-text{
+  font-family:var(--font-body);
+  font-size:clamp(1rem, 4vw, 1.18rem);
+  line-height:1.75;
+  color:var(--cream);
+  max-width:360px;
+  margin:0 0 26px;
+  animation:fadeIn 1.2s ease .9s both;
+}
+
+.date-text{
+  font-family:var(--font-ui);
+  font-size:.78rem; letter-spacing:.24em; text-transform:uppercase;
+  color:var(--gold-light);
+  animation:fadeIn 1.2s ease 1.2s both;
+}
+
+@keyframes fadeIn{ from{ opacity:0; transform:translateY(10px);} to{ opacity:1; transform:translateY(0);} }
+@keyframes letterIn{ to{ opacity:1; transform:translateY(0);} }
+
+.scroll-hint{
+  position:absolute; bottom:26px; left:50%; transform:translateX(-50%);
+  width:22px; height:22px; opacity:.7;
+  animation:bounce 2s ease-in-out infinite;
+}
+@keyframes bounce{ 0%,100%{ transform:translateX(-50%) translateY(0);} 50%{ transform:translateX(-50%) translateY(8px);} }
+
+/* --- 2-bo'lim: tilaklar --- */
+.wish-heading{
+  font-family:var(--font-display);
+  font-style:italic;
+  font-size:clamp(1.3rem,5vw,1.7rem);
+  color:var(--gold-light);
+  margin:0 0 30px;
+  max-width:320px;
+}
+.wish-button{
+  font-family:var(--font-ui); font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+  font-size:.78rem; color:#1a2f22;
+  background:linear-gradient(135deg, var(--gold-light), var(--gold));
+  border:none; border-radius:999px;
+  padding:14px 34px;
+  cursor:pointer;
+  box-shadow:0 8px 20px rgba(0,0,0,.35);
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1), box-shadow .3s ease;
+  margin-bottom:34px;
+}
+.wish-button:hover{ transform:translateY(-2px) scale(1.03); box-shadow:0 10px 26px rgba(0,0,0,.4); }
+.wish-button:active{ transform:scale(.97); }
+
+.wishes{ display:flex; flex-direction:column; gap:16px; max-width:320px; min-height:120px; }
+.wish-line{
+  font-family:var(--font-body); font-size:1.08rem; color:var(--cream);
+  opacity:0; transform:translateY(14px);
+  transition:opacity .8s ease, transform .8s ease;
+}
+.wishes.revealed .wish-line:nth-child(1){ transition-delay:.1s; }
+.wishes.revealed .wish-line:nth-child(2){ transition-delay:.55s; }
+.wishes.revealed .wish-line:nth-child(3){ transition-delay:1s; }
+.wishes.revealed .wish-line{ opacity:1; transform:translateY(0); }
+
+/* --- 3-bo'lim: yakuniy so'z --- */
+.closing-text{
+  font-family:var(--font-display); font-style:italic;
+  font-size:clamp(1.3rem,5.5vw,1.7rem);
+  color:var(--cream);
+  max-width:340px; line-height:1.6;
+  margin-bottom:22px;
+}
+.signature{
+  font-family:var(--font-ui);
+  font-size:.72rem; letter-spacing:.24em; text-transform:uppercase;
+  color:var(--gold-light);
+}
+
+.petals{ position:fixed; inset:0; z-index:2; pointer-events:none; overflow:hidden; }
+.petal{ position:absolute; bottom:-40px; opacity:.55; animation:riseUp linear infinite; }
+.petal svg{ width:100%; height:100%; }
+@keyframes riseUp{
+  0%{ transform:translateY(0) translateX(0) rotate(0deg); opacity:0; }
+  10%{ opacity:.6; } 90%{ opacity:.4; }
+  100%{ transform:translateY(-110vh) translateX(var(--drift,20px)) rotate(200deg); opacity:0; }
+}
+
+@media (max-width:380px){
+  .lang-pill{ padding:5px 8px; font-size:.66rem; }
+  .music-button{ width:38px; height:38px; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="particles-canvas"></canvas>
+<canvas id="confetti-canvas"></canvas>
+
+<svg class="corner-svg top-left" viewBox="0 0 200 200"><path d="M2,120 C40,60 90,20 190,10" /></svg>
+<svg class="corner-svg bottom-right" viewBox="0 0 200 200"><path d="M2,120 C40,60 90,20 190,10" /></svg>
+
+<div class="petals" id="petals"></div>
+
+<div class="top-controls">
+  <div class="lang-switcher" id="lang-switcher">
+    <button class="lang-pill" data-lang="uz">UZ</button>
+    <button class="lang-pill" data-lang="tj">TJ</button>
+    <button class="lang-pill" data-lang="ru">RU</button>
+    <button class="lang-pill" data-lang="en">EN</button>
+    <button class="script-toggle" id="script-toggle" title="Lotin / Kirill">Aa</button>
+  </div>
+  <button class="music-button" id="music-button" aria-label="Musiqa">
+    <div class="music-bars"><span></span><span></span><span></span></div>
+  </button>
+</div>
+
+<!-- Muzika elementiga preload="auto" qo'shildi -->
+<audio id="bg-music" loop preload="auto">
+  <source src="music.mp3" type="audio/mpeg">
+</audio>
+
+<div id="envelope-screen">
+  <div class="envelope-wrap">
+    <div class="envelope-hint" data-i18n="envelopeHint">BOSING</div>
+    <div class="envelope" id="envelope">
+      <svg viewBox="0 0 300 200">
+        <defs>
+          <radialGradient id="glow" cx="50%" cy="35%" r="60%">
+            <stop offset="0%" stop-color="#f2d9a1" stop-opacity="0.9"/>
+            <stop offset="100%" stop-color="#f2d9a1" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <rect class="env-body" x="6" y="6" width="288" height="188" rx="6"/>
+        <circle class="env-glow" cx="150" cy="70" r="90" fill="url(#glow)"/>
+        <polygon class="env-flap" points="6,6 150,110 294,6"/>
+      </svg>
+      <button class="envelope-button" id="envelope-button" data-i18n="envelopeHint">BOSING</button>
+    </div>
+  </div>
+</div>
+
+<main id="main-content">
+
+  <!-- 1-BO'LIM -->
+  <section class="section hero-section">
+    <p class="subtitle" data-i18n="subtitle">Bizning kichkina quvonchimiz nomidan</p>
+    <h1 class="hero-title" id="hero-title"></h1>
+    <div class="divider">
+      <span class="line"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.2"><path d="M12 21c0-6 4-9 4-13a4 4 0 0 0-8 0c0 4 4 7 4 13Z"/></svg>
+      <span class="line right"></span>
+    </div>
+    <p class="greeting-text" data-i18n="greeting">Bugun sen uchun alohida kun...</p>
+    <p class="date-text" data-i18n="dateText">15 – Sentyabr</p>
+    <svg class="scroll-hint" viewBox="0 0 24 24" fill="none" stroke="var(--gold-light)" stroke-width="1.5"><path d="M6 9l6 6 6-6"/></svg>
+  </section>
+
+  <!-- 2-BO'LIM -->
+  <section class="section wish-section">
+    <p class="wish-heading" data-i18n="wishTitle">Yuragimizdan yana ozgina...</p>
+    <button class="wish-button" id="wish-button" data-i18n="wishButton">OCHISH</button>
+    <div class="wishes" id="wishes">
+      <p class="wish-line" data-i18n="wish1"></p>
+      <p class="wish-line" data-i18n="wish2"></p>
+      <p class="wish-line" data-i18n="wish3"></p>
+    </div>
+    <svg class="scroll-hint" viewBox="0 0 24 24" fill="none" stroke="var(--gold-light)" stroke-width="1.5"><path d="M6 9l6 6 6-6"/></svg>
+  </section>
+
+  <!-- 3-BO'LIM -->
+  <section class="section closing-section">
+    <div class="divider">
+      <span class="line"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.2"><path d="M12 21c0-6 4-9 4-13a4 4 0 0 0-8 0c0 4 4 7 4 13Z"/></svg>
+      <span class="line right"></span>
+    </div>
+    <p class="closing-text" data-i18n="closingText">Bugungi kunni va butun yilingni baxt kuzatib yursin.</p>
+    <p class="signature" data-i18n="signature">Oilang tomonidan, sevgi bilan</p>
+  </section>
+
+</main>
+
+<script>
+/* =========================================================
+   TARJIMALAR
+   ========================================================= */
+const translations = {
+  "uz-latin": {
+    langLabel:"UZ", title:"Dilnura",
+    subtitle:"Bizning kichkina quvonchimiz nomidan",
+    greeting:"Bugun sen uchun alohida kun — u kulgi, quvonch va yorug'likka to'la bo'lsin! Oilang seni juda-juda yaxshi ko'radi va doim yoningda bo'ladi. Tug'ilgan kuning muborak bo'lsin, azizamiz!",
+    dateText:"15 – Sentyabr", envelopeHint:"Bosing", musicLabel:"Musiqa",
+    wishTitle:"Yuragimizdan yana ozgina...", wishButton:"Ochish",
+    wish1:"Kulging hech qachon so'nmasin",
+    wish2:"Orzularing bittalab ushalsin",
+    wish3:"Niyating amalga oshsin, maqsadlaringga yet (styuardessa)",
+    closingText:"Bugungi kunni va butun yilingni baxt kuzatib yursin.",
+    signature:"Oilang tomonidan"
+  },
+  "uz-cyrillic": {
+    langLabel:"UZ", title:"Дилнура",
+    subtitle:"Бизнинг кичкина қувончимиз номидан",
+    greeting:"Бугун сен учун алоҳида кун — у кулги, қувонч ва ёруғликка тўла бўлсин! Оиланг сени жуда-жуда яхши кўради ва доим ёнингда бўлади. Туғилган кунинг муборак бўлсин, азизамиз!",
+    dateText:"15 – Сентябр", envelopeHint:"Босинг", musicLabel:"Мусиқа",
+    wishTitle:"Юрагимиздан яна озгина...", wishButton:"Очиш",
+    wish1:"Кулгинг ҳеч қачон сўнмасин",
+    wish2:"Орзуларинг битталаб ушалсин",
+    wish3:"Ниятинг амалга ошсин, мақсадларингга ет (стюардесса)",
+    closingText:"Бугунги кунни ва бутун йилингни бахт кузатиб юрсин.",
+    signature:"Оиланг томонидан"
+  },
+  "tj-latin": {
+    langLabel:"TJ", title:"Dilnura",
+    subtitle:"Az çonibi shodii xurdi mo",
+    greeting:"Imrўz rўzi maxsusi tust — bigzor pur az xandayu shodī va ravshanī boshad! Oilaat turo xele dўst medorad va hamesha dar pahluyat xohad bud. Zodrўzat muborak boshad, azizam!",
+    dateText:"15 – Sentyabr", envelopeHint:"Pahsh kuned", musicLabel:"Musiqī",
+    wishTitle:"Az dili mo boz camche...", wishButton:"Kushodan",
+    wish1:"Xandaat hargiz xomush nashavad",
+    wish2:"Orzuhoyat yakto-yakto amali shavand",
+    wish3:"Niyatat amalī şavad, ba maqsadhoyat ras (styuardessa)",
+    closingText:"Bigzor imrўz va tamomi soli tu baxşoyī hamrohī kunad.",
+    signature:"Az çonibi oilaat"
+  },
+  "tj-cyrillic": {
+    langLabel:"TJ", title:"Дилнура",
+    subtitle:"Аз ҷониби шодии хурди мо",
+    greeting:"Имрӯз рӯзи махсуси туст — бигзор пур аз хандаю шодӣ ва равшанӣ бошад! Оилаат туро хеле дӯст медорад ва ҳамеша дар паҳлуят хоҳад буд. Зодрӯзат муборак бошад, азизам!",
+    dateText:"15 – Сентябр", envelopeHint:"Пахш кунед", musicLabel:"Мусиқӣ",
+    wishTitle:"Аз дили мо боз камче...", wishButton:"Кушодан",
+    wish1:"Хандаат ҳаргиз хомуш нашавад",
+    wish2:"Орзуҳоят якто-якто амалӣ шаванд",
+    wish3:"Ниятат амалӣ шавад, ба мақсадҳоят рас (стюардесса)",
+    closingText:"Бигзор имрӯз ва тамоми соли ту бахшоӣ ҳамроҳӣ кунад.",
+    signature:"Аз ҷониби оилаат"
+  },
+  "ru": {
+    langLabel:"RU", title:"Дилнура",
+    subtitle:"От твоей маленькой радости",
+    greeting:"Сегодня твой особенный день — пусть он будет полон смеха, радости и света! Твоя семья очень любит тебя и всегда будет рядом. С днём рождения, дорогая!",
+    dateText:"15 сентября", envelopeHint:"Нажми", musicLabel:"Музыка",
+    wishTitle:"От всего сердца — ещё немного...", wishButton:"Открыть",
+    wish1:"Пусть твоя улыбка не гаснет никогда",
+    wish2:"Пусть все мечты сбываются одна за другой",
+    wish3:"Пусть твои желания сбудутся, достигай своих целей (стюардесса)",
+    closingText:"Пусть счастье сопровождает тебя сегодня и весь год.",
+    signature:"От твоей семьи"
+  },
+  "en": {
+    langLabel:"EN", title:"Dilnura",
+    subtitle:"From your little ray of joy",
+    greeting:"Today is your special day — may it be filled with laughter, joy, and light! Your family loves you so much and will always be by your side. Happy birthday, dear one!",
+    dateText:"September 15", envelopeHint:"Open", musicLabel:"Music",
+    wishTitle:"A little more from our hearts...", wishButton:"Open",
+    wish1:"May your smile never fade",
+    wish2:"May your dreams come true, one by one",
+    wish3:"May your wishes come true — reach your goals (stewardess)",
+    closingText:"May happiness follow you today and all year long.",
+    signature:"From your family"
+  }
+};
+
+const scriptCapableLangs = ["uz","tj"];
+let state = { lang:"uz", script:"latin" };
+
+function currentKey(){
+  return scriptCapableLangs.includes(state.lang) ? `${state.lang}-${state.script}` : state.lang;
+}
+
+function renderTitleLetters(text){
+  const el = document.getElementById("hero-title");
+  el.innerHTML = "";
+  [...text].forEach((ch,i)=>{
+    const span = document.createElement("span");
+    span.textContent = ch === " " ? "\u00A0" : ch;
+    span.style.animationDelay = (i*0.045)+"s";
+    el.appendChild(span);
+  });
+}
+
+function applyTranslations(){
+  const t = translations[currentKey()];
+  document.querySelectorAll("[data-i18n]").forEach(node=>{
+    const key = node.getAttribute("data-i18n");
+    if(t[key] !== undefined) node.textContent = t[key];
+  });
+  renderTitleLetters(t.title);
+  document.getElementById("music-button").setAttribute("aria-label", t.musicLabel);
+
+  document.querySelectorAll(".lang-pill").forEach(btn=>{
+    btn.classList.toggle("active", btn.dataset.lang === state.lang);
+  });
+
+  const scriptBtn = document.getElementById("script-toggle");
+  const capable = scriptCapableLangs.includes(state.lang);
+  scriptBtn.disabled = !capable;
+  scriptBtn.style.opacity = capable ? "1" : ".3";
+}
+
+document.querySelectorAll(".lang-pill").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    state.lang = btn.dataset.lang;
+    if(!scriptCapableLangs.includes(state.lang)) state.script = "latin";
+    applyTranslations();
+  });
+});
+
+document.getElementById("script-toggle").addEventListener("click", ()=>{
+  state.script = state.script === "latin" ? "cyrillic" : "latin";
+  applyTranslations();
+});
+
+applyTranslations();
+
+/* =========================================================
+   KONVERT OCHILISHI VA AUDIO QISM (Kuchaytirilgan)
+   ========================================================= */
+const audio = document.getElementById("bg-music");
+
+document.getElementById("envelope-button").addEventListener("click", ()=>{
+  const envelope = document.getElementById("envelope");
+  const screen = document.getElementById("envelope-screen");
+  const main = document.getElementById("main-content");
+  
+  // Audioni majburiy yuklash va ijro etish
+  audio.load();
+  audio.play().then(() => {
+    document.getElementById("music-button").classList.add("playing");
+  }).catch((err) => {
+    console.log("Audio play error:", err);
+  });
+
+  envelope.classList.add("opened");
+  setTimeout(()=>{
+    screen.classList.add("hidden");
+    main.classList.add("show");
+  }, 650);
+});
+
+/* =========================================================
+   MUSIQA TUGMASI
+   ========================================================= */
+const musicBtn = document.getElementById("music-button");
+musicBtn.addEventListener("click", ()=>{
+  if(audio.paused){
+    audio.play().then(()=>{
+      musicBtn.classList.add("playing");
+    }).catch(e=>console.log(e));
+  }else{
+    audio.pause();
+    musicBtn.classList.remove("playing");
+  }
+});
+
+/* =========================================================
+   TILAKLAR TUGMASI + KONFETTI
+   ========================================================= */
+document.getElementById("wish-button").addEventListener("click", ()=>{
+  const wishes = document.getElementById("wishes");
+  wishes.classList.remove("revealed");
+  void wishes.offsetWidth;
+  wishes.classList.add("revealed");
+  launchConfetti();
+});
+
+/* =========================================================
+   FON ZARRACHALARI (canvas)
+   ========================================================= */
+const canvas = document.getElementById("particles-canvas");
+const ctx = canvas.getContext("2d");
+let particles = [];
+
+function resizeCanvases(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  confettiCanvas.width = window.innerWidth;
+  confettiCanvas.height = window.innerHeight;
+}
+
+function createParticles(){
+  const count = Math.min(70, Math.floor((canvas.width*canvas.height)/16000));
+  particles = Array.from({length:count}, ()=>({
+    x: Math.random()*canvas.width,
+    y: Math.random()*canvas.height,
+    r: Math.random()*1.6 + 0.4,
+    big: Math.random() < 0.12,
+    speedY: Math.random()*0.25 + 0.05,
+    driftX: (Math.random()-0.5)*0.2,
+    baseOpacity: Math.random()*0.5 + 0.2,
+    glowPhase: Math.random()*Math.PI*2
+  }));
+}
+
+function drawParticles(t){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  particles.forEach(p=>{
+    const glow = p.big ? (Math.sin(t/900 + p.glowPhase)+1)/2 : 0;
+    const opacity = p.baseOpacity + (p.big ? glow*0.5 : 0);
+    const radius = p.big ? p.r*2.4 : p.r;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radius, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(242,217,161,${Math.min(opacity,1)})`;
+    if(p.big){ ctx.shadowBlur = 8 + glow*10; ctx.shadowColor = "rgba(242,217,161,0.9)"; }
+    else{ ctx.shadowBlur = 0; }
+    ctx.fill();
+    p.y -= p.speedY;
+    p.x += p.driftX;
+    if(p.y < -10){ p.y = canvas.height + 10; p.x = Math.random()*canvas.width; }
+    if(p.x < -10) p.x = canvas.width+10;
+    if(p.x > canvas.width+10) p.x = -10;
+  });
+  requestAnimationFrame(drawParticles);
+}
+
+/* =========================================================
+   KONFETTI
+   ========================================================= */
+const confettiCanvas = document.getElementById("confetti-canvas");
+const cctx = confettiCanvas.getContext("2d");
+let confettiPieces = [];
+const confettiColors = ["#d4af6a","#f2d9a1","#8fbfa5","#e8c4c4","#f7f3e8"];
+
+function launchConfetti(){
+  const count = 90;
+  for(let i=0;i<count;i++){
+    confettiPieces.push({
+      x: Math.random()*confettiCanvas.width,
+      y: -20 - Math.random()*confettiCanvas.height*0.3,
+      w: 6 + Math.random()*6,
+      h: 8 + Math.random()*10,
+      color: confettiColors[Math.floor(Math.random()*confettiColors.length)],
+      speedY: 1.6 + Math.random()*2.4,
+      speedX: (Math.random()-0.5)*1.6,
+      rotation: Math.random()*360,
+      rotSpeed: (Math.random()-0.5)*10,
+      opacity: 1
+    });
+  }
+}
+
+function drawConfetti(){
+  cctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
+  confettiPieces.forEach(p=>{
+    cctx.save();
+    cctx.translate(p.x,p.y);
+    cctx.rotate(p.rotation*Math.PI/180);
+    cctx.globalAlpha = p.opacity;
+    cctx.fillStyle = p.color;
+    cctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+    cctx.restore();
+
+    p.y += p.speedY;
+    p.x += p.speedX;
+    p.rotation += p.rotSpeed;
+    if(p.y > confettiCanvas.height*0.75) p.opacity -= 0.012;
+  });
+  confettiPieces = confettiPieces.filter(p => p.opacity > 0 && p.y < confettiCanvas.height+30);
+  requestAnimationFrame(drawConfetti);
+}
+
+/* =========================================================
+   SUZUVCHI BARGLAR
+   ========================================================= */
+const petalsContainer = document.getElementById("petals");
+const PETAL_COUNT = 9;
+function leafSVG(){
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="#d4af6a" stroke-width="1"><path d="M12 21c0-6 4-9 4-13a4 4 0 0 0-8 0c0 4 4 7 4 13Z"/></svg>`;
+}
+for(let i=0;i<PETAL_COUNT;i++){
+  const petal = document.createElement("div");
+  petal.className = "petal";
+  const size = 10 + Math.random()*10;
+  petal.style.width = size+"px";
+  petal.style.height = size+"px";
+  petal.style.left = Math.random()*100+"%";
+  petal.style.setProperty("--drift", (Math.random()*60-30)+"px");
+  petal.style.animationDuration = (14 + Math.random()*12)+"s";
+  petal.style.animationDelay = (Math.random()*14)+"s";
+  petal.innerHTML = leafSVG();
+  petalsContainer.appendChild(petal);
+}
+
+window.addEventListener("resize", resizeCanvases);
+resizeCanvases();
+createParticles();
+requestAnimationFrame(drawParticles);
+requestAnimationFrame(drawConfetti);
+</script>
+</body>
+</html>
